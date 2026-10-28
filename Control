@@ -1,0 +1,9 @@
+Package: com.yourname.wechatglass
+Name: WeChatGlass
+Version: 0.0.1
+Architecture: iphoneos-arm64
+Depends: ellekit
+Description: Probe build for WeChat bottom bar
+Maintainer: you
+Author: you
+Section: Tweaks
