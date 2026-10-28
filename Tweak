@@ -1,0 +1,54 @@
+#import <UIKit/UIKit.h>
+#import <objc/runtime.h>
+
+static BOOL TFIsMainTabBar(UIView *bar) {
+    Class ctl = NSClassFromString(@"MMTabBarController");
+    if (!ctl) return YES;
+    for (UIView *v = bar; v; v = v.superview)
+        if ([v.nextResponder isKindOfClass:ctl]) return YES;
+    return NO;
+}
+
+%hook MMTabBar
+
+- (id)initWithFrame:(CGRect)frame {
+    id r = %orig;
+    NSLog(@"[TFGlass] initWithFrame %@ main=%d", NSStringFromCGRect(frame), TFIsMainTabBar(self));
+    return r;
+}
+
+- (void)setTabBarBackgroundColor:(UIColor *)color useBlur:(BOOL)useBlur {
+    NSLog(@"[TFGlass] setBG color=%@ useBlur=%d main=%d",
+          color, useBlur, TFIsMainTabBar(self));
+    %orig;
+}
+
+- (void)addCustomBackground {
+    NSLog(@"[TFGlass] addCustomBackground main=%d", TFIsMainTabBar(self));
+    %orig;
+}
+
+- (void)configureClearBackground {
+    NSLog(@"[TFGlass] configureClearBackground main=%d", TFIsMainTabBar(self));
+    %orig;
+}
+
+- (void)layoutSubviews {
+    %orig;
+    static int n = 0;
+    if (n++ >= 2) return;                     // 只打前两次,别刷爆日志
+    UIView *bg = [self respondsToSelector:@selector(backgroundView)]
+                     ? [(id)self backgroundView] : nil;
+    NSLog(@"[TFGlass] layout main=%d bgClass=%@ bgColor=%@ hidden=%d",
+          TFIsMainTabBar(self), bg.class, bg.backgroundColor, self.hidden);
+    for (UIView *s in self.subviews)
+        NSLog(@"[TFGlass]   sub %@ frame=%@ bg=%@",
+              s.class, NSStringFromCGRect(s.frame), s.backgroundColor);
+}
+
+%end
+
+// 证明注入本身成功 —— 没有这行就说明 dylib 没进去,与 hook 无关
+%ctor {
+    NSLog(@"[TFGlass] tweak loaded");
+}
